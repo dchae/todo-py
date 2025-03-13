@@ -1,4 +1,4 @@
-from flask import abort, session, g
+from flask import session, g
 from uuid import uuid4
 
 
@@ -15,72 +15,59 @@ def error_for_todo(todo):
         return "The Todo must be between 1 and 100 chars."
 
 
-def get_list(list_id):
-    if list_id not in g.lists:
-        abort(404, "List could not be found")
-
-    lst = g.lists[list_id]
+def get_list(list_id, lists):
+    assert list_id in lists, "List could not be found"
+    lst = lists[list_id]
     assert list_id == lst["id"], "List id does not match registered dict key"
     return lst
 
 
-def get_todos(list_id):
-    lst = get_list(list_id)
-    return lst["todos"]
-
-
-def add_list(list_title):
+def add_list(list_title, lists):
     id = str(uuid4())
     new_list = {"id": id, "title": list_title, "todos": {}}
-    g.lists[id] = new_list
+    lists[id] = new_list
     session.modified = True
 
 
-def add_todo(list_id, todo_title):
+def add_todo(todo_title, lst):
     todo_id = str(uuid4())
     todo = {"id": todo_id, "title": todo_title, "completed": False}
-    lst = g.lists[list_id]
     lst["todos"][todo_id] = todo
     session.modified = True
 
 
-def get_todo(list_id, todo_id):
-    lst = get_list(list_id)
-    if todo_id not in lst["todos"]:
-        abort(404, "Todo could not be found")
+def get_todo(todo_id, lst):
+    assert todo_id in lst["todos"], "Todo could not be found"
     return lst["todos"][todo_id]
 
 
-def set_todo_completed(list_id, todo_id, status):
-    todo = get_todo(list_id, todo_id)
+def set_todo_completed(todo, status):
     todo["completed"] = status
     session.modified = True
 
 
-def set_list_completed(list_id, status=True):
-    todos = get_todos(list_id)
+def set_list_completed(lst, status=True):
+    todos = lst["todos"]
     for todo in todos.values():
         todo["completed"] = status
     session.modified = True
 
 
-def delete_todo(list_id, todo_id):
-    todos = get_todos(list_id)
-    if todo_id not in todos:
-        abort(404, "Todo could not be found")
+def delete_todo(lst, todo_id):
+    todos = lst["todos"]
+    assert todo_id in todos, "Todo could not be found"
     del todos[todo_id]
     session.modified = True
     # unneeded for del, but just for consistency
 
 
-def update_list_title(list_id, new_title):
-    lst = get_list(list_id)
+def update_list_title(lst, new_title):
     lst["title"] = new_title
     session.modified = True
 
 
-def delete_list(list_id):
-    get_list(list_id)
+def delete_list(list_id, lists):
+    get_list(list_id, lists)
     del g.lists[list_id]
     session.modified = True
 
